@@ -1,0 +1,482 @@
+<Window x:Class="FloatWeather.Views.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="设置" Height="620" Width="430"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None" AllowsTransparency="True"
+        Background="Transparent" ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        FontFamily="Microsoft YaHei UI, Segoe UI"
+        UseLayoutRounding="True" SnapsToDevicePixels="True">
+    <Window.Resources>
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{StaticResource TextLowBrush}"/>
+            <Setter Property="Margin" Value="0,0,0,5"/>
+        </Style>
+        <Style x:Key="GroupTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{StaticResource TextHighBrush}"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+        </Style>
+        <Style x:Key="GroupCard" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource CardGlassBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource StrokeBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="14"/>
+            <Setter Property="Margin" Value="0,0,0,14"/>
+        </Style>
+        <Style x:Key="ProviderRow" TargetType="Border">
+            <Setter Property="Background" Value="#14FFFFFF"/>
+            <Setter Property="BorderBrush" Value="{StaticResource StrokeBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="Padding" Value="12,10"/>
+        </Style>
+        <Style x:Key="StateBadge" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Text" Value="未配置"/>
+            <Setter Property="Foreground" Value="{StaticResource TextFaintBrush}"/>
+        </Style>
+        <Style x:Key="SaveMessageStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="{StaticResource SuccessBrush}"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="12,10,16,18">
+        <!-- 柔和投影：多层半透明圆角，替代 DropShadowEffect（避免透明窗口的灰色直角） -->
+        <Border CornerRadius="16" Margin="2,4,0,0" Background="#0F000000"/>
+        <Border CornerRadius="16" Margin="1,2,0,0" Background="#16000000"/>
+        <Border CornerRadius="16" Background="{StaticResource AppBgSoftBrush}"
+                BorderBrush="{StaticResource StrokeStrongBrush}" BorderThickness="1">
+        <Grid ClipToBounds="True">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- 顶部高光反射层 -->
+            <Border CornerRadius="16" IsHitTestVisible="False">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                        <GradientStop Color="#2EFFFFFF" Offset="0"/>
+                        <GradientStop Color="#00FFFFFF" Offset="0.4"/>
+                    </LinearGradientBrush>
+                </Border.Background>
+            </Border>
+
+            <!-- 自绘标题栏 -->
+            <Grid Grid.Row="0" Height="46" MouseLeftButtonDown="TitleBar_MouseLeftButtonDown"
+                  Background="Transparent">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal" Margin="18,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="⚙" FontSize="13" Foreground="{StaticResource AccentBrush}"
+                               VerticalAlignment="Center"/>
+                    <TextBlock Text="设置" FontSize="13" FontWeight="SemiBold"
+                               Foreground="{StaticResource TextHighBrush}" Margin="7,0,0,0"/>
+                </StackPanel>
+                <Border Grid.Column="1" Width="30" Height="30" CornerRadius="9" Margin="6,0,12,0"
+                        VerticalAlignment="Center" Cursor="Hand" MouseLeftButtonDown="Close_Click">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="#33E5484D"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <TextBlock Text="✕" FontSize="12" Foreground="{StaticResource TextMidBrush}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+            </Grid>
+
+            <!-- 内容区 -->
+            <ScrollViewer Grid.Row="1" Style="{StaticResource GlassScrollViewer}" VerticalScrollBarVisibility="Auto" Padding="16,2,16,18">
+                <StackPanel>
+
+                    <!-- 基础设置 -->
+                    <Border Style="{StaticResource GroupCard}">
+                        <StackPanel>
+                            <TextBlock Text="基础设置" Style="{StaticResource GroupTitle}"/>
+                            <TextBlock Text="城市名称（自动解析各数据源城市 ID）" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Text="{Binding CityName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12"/>
+                            <TextBlock Text="刷新间隔" Style="{StaticResource FieldLabel}"/>
+                            <ComboBox ItemsSource="{Binding RefreshIntervalOptions}" SelectedItem="{Binding RefreshIntervalMinutes}" Margin="0,0,0,12">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding}">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Text" Value=""/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding}" Value="5"><Setter Property="Text" Value="5 分钟"/></DataTrigger>
+                                                        <DataTrigger Binding="{Binding}" Value="10"><Setter Property="Text" Value="10 分钟"/></DataTrigger>
+                                                        <DataTrigger Binding="{Binding}" Value="15"><Setter Property="Text" Value="15 分钟"/></DataTrigger>
+                                                        <DataTrigger Binding="{Binding}" Value="30"><Setter Property="Text" Value="30 分钟"/></DataTrigger>
+                                                        <DataTrigger Binding="{Binding}" Value="60"><Setter Property="Text" Value="60 分钟（1 小时）"/></DataTrigger>
+                                                        <DataTrigger Binding="{Binding}" Value="120"><Setter Property="Text" Value="120 分钟（2 小时）"/></DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <TextBlock Text="主数据源（留空则按注册顺序）" Style="{StaticResource FieldLabel}"/>
+                            <ComboBox ItemsSource="{Binding ProviderNames}" SelectedItem="{Binding PrimaryProvider}" Margin="0,0,0,12"/>
+                            <TextBlock Text="备用数据源（主源失败时降级）" Style="{StaticResource FieldLabel}"/>
+                            <ComboBox ItemsSource="{Binding ProviderNames}" SelectedItem="{Binding FallbackProvider}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 悬浮窗与穿透 -->
+                    <Border Style="{StaticResource GroupCard}">
+                        <StackPanel>
+                            <TextBlock Text="悬浮窗与穿透" Style="{StaticResource GroupTitle}"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="显示悬浮窗" FontSize="13" FontWeight="SemiBold"
+                                               Foreground="{StaticResource TextHighBrush}"/>
+                                    <TextBlock Text="隐藏后可从托盘菜单「显示悬浮窗」找回" FontSize="10"
+                                               Foreground="{StaticResource TextFaintBrush}" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <CheckBox Grid.Column="1" IsChecked="{Binding FloaterVisible}"
+                                          VerticalAlignment="Center" Margin="8,0,0,0"/>
+                            </Grid>
+                            <Grid Margin="0,12,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="鼠标穿透" FontSize="13" FontWeight="SemiBold"
+                                               Foreground="{StaticResource TextHighBrush}"/>
+                                    <TextBlock Text="开启后鼠标穿过悬浮窗（仅托盘可交互），贴靠桌面用" FontSize="10"
+                                               Foreground="{StaticResource TextFaintBrush}" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <CheckBox Grid.Column="1" IsChecked="{Binding ClickThrough}"
+                                          VerticalAlignment="Center" Margin="8,0,0,0"/>
+                            </Grid>
+                            <TextBlock Text="显示外观" Style="{StaticResource FieldLabel}" Margin="0,12,0,0"/>
+                            <ComboBox ItemsSource="{Binding DisplayModeOptions}" SelectedItem="{Binding DisplayMode}" Margin="0,0,0,12"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="透明度" FontSize="13" FontWeight="SemiBold"
+                                           Foreground="{StaticResource TextHighBrush}" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{Binding OpacityPercent, StringFormat={}{0}%}"
+                                           FontSize="12" Foreground="{StaticResource TextMidBrush}"
+                                           VerticalAlignment="Center" Margin="10,0,0,0"
+                                           MinWidth="36" TextAlignment="Right"/>
+                            </Grid>
+                            <Slider Minimum="20" Maximum="100" Value="{Binding OpacityPercent}"
+                                    Margin="6,6,0,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="100% 为不透明；桌面直显建议配合鼠标穿透贴靠桌面" FontSize="10"
+                                       Foreground="{StaticResource TextFaintBrush}" Margin="0,6,0,0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 数据源配置（点击卡片弹窗输入） -->
+                    <Border Style="{StaticResource GroupCard}">
+                        <StackPanel>
+                            <TextBlock Text="数据源" Style="{StaticResource GroupTitle}"/>
+                            <TextBlock Text="点击「配置」在弹窗中填写各数据源凭据" Style="{StaticResource FieldLabel}" Margin="0,-4,0,10"/>
+
+                            <!-- 和风天气 -->
+                            <Border Style="{StaticResource ProviderRow}" Margin="0,0,0,10">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="和风天气" FontSize="13" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource TextHighBrush}"/>
+                                        <TextBlock Text="实时 / 逐时 / 逐日 / 指数" FontSize="10"
+                                                   Foreground="{StaticResource TextFaintBrush}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Border Padding="7,2" CornerRadius="6" Background="#1FFFFFFF"
+                                                VerticalAlignment="Center" Margin="0,0,8,0">
+                                            <TextBlock>
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource StateBadge}">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding QwConfigured}" Value="True">
+                                                                <Setter Property="Text" Value="已配置"/>
+                                                                <Setter Property="Foreground" Value="{StaticResource SuccessBrush}"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </Border>
+                                        <Button Content="配置" Style="{StaticResource GhostButton}"
+                                                Padding="12,5" FontSize="12" Click="ConfigureQw_Click"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <!-- 高德天气 -->
+                            <Border Style="{StaticResource ProviderRow}" Margin="0,0,0,10">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="高德天气" FontSize="13" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource TextHighBrush}"/>
+                                        <TextBlock Text="实时 / 逐日" FontSize="10"
+                                                   Foreground="{StaticResource TextFaintBrush}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Border Padding="7,2" CornerRadius="6" Background="#1FFFFFFF"
+                                                VerticalAlignment="Center" Margin="0,0,8,0">
+                                            <TextBlock>
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource StateBadge}">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding AmapConfigured}" Value="True">
+                                                                <Setter Property="Text" Value="已配置"/>
+                                                                <Setter Property="Foreground" Value="{StaticResource SuccessBrush}"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </Border>
+                                        <Button Content="配置" Style="{StaticResource GhostButton}"
+                                                Padding="12,5" FontSize="12" Click="ConfigureAmap_Click"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <!-- OpenWeather -->
+                            <Border Style="{StaticResource ProviderRow}" Margin="0,0,0,10">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="OpenWeather" FontSize="13" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource TextHighBrush}"/>
+                                        <TextBlock Text="实时 / 逐时 / 逐日" FontSize="10"
+                                                   Foreground="{StaticResource TextFaintBrush}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Border Padding="7,2" CornerRadius="6" Background="#1FFFFFFF"
+                                                VerticalAlignment="Center" Margin="0,0,8,0">
+                                            <TextBlock>
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource StateBadge}">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding OwConfigured}" Value="True">
+                                                                <Setter Property="Text" Value="已配置"/>
+                                                                <Setter Property="Foreground" Value="{StaticResource SuccessBrush}"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </Border>
+                                        <Button Content="配置" Style="{StaticResource GhostButton}"
+                                                Padding="12,5" FontSize="12" Click="ConfigureOw_Click"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <!-- Open-Meteo（免费） -->
+                            <Border Style="{StaticResource ProviderRow}" Margin="0,0,0,10">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Open-Meteo" FontSize="13" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource TextHighBrush}"/>
+                                        <TextBlock Text="免费无 Key · 实时 / 逐时 / 逐日" FontSize="10"
+                                                   Foreground="{StaticResource TextFaintBrush}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Border Padding="7,2" CornerRadius="6" Background="#1FFFFFFF"
+                                                VerticalAlignment="Center" Margin="0,0,8,0">
+                                            <TextBlock Text="免费" FontSize="10" FontWeight="SemiBold"
+                                                       Foreground="{StaticResource SuccessBrush}"/>
+                                        </Border>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <!-- wttr.in（免费） -->
+                            <Border Style="{StaticResource ProviderRow}" Margin="0,0,0,10">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="wttr.in" FontSize="13" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource TextHighBrush}"/>
+                                        <TextBlock Text="免费无 Key · 实时 / 逐时 / 逐日" FontSize="10"
+                                                   Foreground="{StaticResource TextFaintBrush}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Border Padding="7,2" CornerRadius="6" Background="#1FFFFFFF"
+                                                VerticalAlignment="Center" Margin="0,0,8,0">
+                                            <TextBlock Text="免费" FontSize="10" FontWeight="SemiBold"
+                                                       Foreground="{StaticResource SuccessBrush}"/>
+                                        </Border>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <!-- 中国天气网（免费·末位兜底） -->
+                            <Border Style="{StaticResource ProviderRow}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="中国天气网" FontSize="13" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource TextHighBrush}"/>
+                                        <TextBlock Text="免费无 Key · 实时 / 逐时 / 逐日 · 末位兜底" FontSize="10"
+                                                   Foreground="{StaticResource TextFaintBrush}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Border Padding="7,2" CornerRadius="6" Background="#1FFFFFFF"
+                                                VerticalAlignment="Center">
+                                            <TextBlock Text="免费" FontSize="10" FontWeight="SemiBold"
+                                                       Foreground="{StaticResource SuccessBrush}"/>
+                                        </Border>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <!-- 心知天气 -->
+                            <Border Style="{StaticResource ProviderRow}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="心知天气" FontSize="13" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource TextHighBrush}"/>
+                                        <TextBlock Text="实时 / 逐时 / 逐日" FontSize="10"
+                                                   Foreground="{StaticResource TextFaintBrush}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Border Padding="7,2" CornerRadius="6" Background="#1FFFFFFF"
+                                                VerticalAlignment="Center" Margin="0,0,8,0">
+                                            <TextBlock>
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource StateBadge}">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding SnConfigured}" Value="True">
+                                                                <Setter Property="Text" Value="已配置"/>
+                                                                <Setter Property="Foreground" Value="{StaticResource SuccessBrush}"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </Border>
+                                        <Button Content="配置" Style="{StaticResource GhostButton}"
+                                                Padding="12,5" FontSize="12" Click="ConfigureSn_Click"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 数据源状态 -->
+                    <Border Style="{StaticResource GroupCard}">
+                        <StackPanel>
+                            <TextBlock Text="数据源状态" Style="{StaticResource GroupTitle}"/>
+                            <ItemsControl ItemsSource="{Binding Sources}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,4">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Name}" FontSize="13"
+                                                           Foreground="{StaticResource TextHighBrush}"/>
+                                                <TextBlock Text="{Binding LastError}" FontSize="10"
+                                                           Foreground="{StaticResource TextFaintBrush}"
+                                                           Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
+                                            </StackPanel>
+                                            <Border Grid.Column="1" Padding="8,3" CornerRadius="7"
+                                                    Background="#1FFFFFFF" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding StateText}" FontSize="11" FontWeight="SemiBold"
+                                                           VerticalAlignment="Center">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="#99FFFFFF"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding StateText}" Value="正常">
+                                                                    <Setter Property="Foreground" Value="#A3E635"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding StateText}" Value="熔断中">
+                                                                    <Setter Property="Foreground" Value="#FF8A80"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding StateText}" Value="未配置">
+                                                                    <Setter Property="Foreground" Value="#66FFFFFF"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding StateText}" Value="失败1次">
+                                                                    <Setter Property="Foreground" Value="#FFD166"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </Border>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 保存信息 -->
+                    <TextBlock Text="{Binding SaveMessage}" Style="{StaticResource SaveMessageStyle}" Margin="2,0,0,0"/>
+
+                    <!-- 操作按钮 -->
+                    <Grid Margin="0,16,0,0">
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="刷新状态" Command="{Binding RefreshHealthCmd}"
+                                    Style="{StaticResource GhostButton}"/>
+                            <Button Content="保存设置" Click="Save_Click" Margin="10,0,0,0"
+                                    Style="{StaticResource PrimaryButton}"/>
+                        </StackPanel>
+                        <Button Content="关闭" Click="Close_Click" Margin="0,0,2,0"
+                                Style="{StaticResource GhostButton}" HorizontalAlignment="Right"/>
+                    </Grid>
+
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+        </Border>
+    </Grid>
+</Window>

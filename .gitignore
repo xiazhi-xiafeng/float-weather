@@ -1,0 +1,47 @@
+# ===== 构建产物 =====
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo
+*.userprefs
+*.pidb
+*.userosscache
+*.sln.docstates
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+*.props
+*.dto
+
+# ===== IDE / 编辑器 =====
+.vs/
+.idea/
+.vscode/
+*.VC.db
+*.VC.opendb
+*.ReSharper*
+
+# ===== 运行时生成数据（本地，不入库） =====
+# user-config 保存用户填写的各数据源 Key 等敏感配置
+user-config.json
+# 悬浮窗位置等 UI 运行状态
+ui-state.json
+# 运行日志
+logs/
+
+# ===== 临时工具 / 一次性工程 =====
+# 图标生成用的一次性临时工程
+.tmp-icongen/
+
+# ===== 测试输出 =====
+# ProviderTester 就地生成的回归结果
+results.txt
+# 手动/探测调研生成的临时校验文件（含抓取到的原始响应）
+_probe_*.txt
+_mweather_*.txt
+
+# ===== 系统文件 =====
+Thumbs.db
+Desktop.ini
