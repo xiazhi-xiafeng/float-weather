@@ -20,7 +20,7 @@
             <Border CornerRadius="18" Margin="2,4,0,0">
                 <Border.Style>
                     <Style TargetType="Border">
-                        <Setter Property="Background" Value="#0F000000"/>
+                        <Setter Property="Background" Value="{StaticResource ShadowSoftBrush}"/>
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding IsBare}" Value="True">
                                 <Setter Property="Background" Value="Transparent"/>
@@ -32,7 +32,7 @@
             <Border CornerRadius="18" Margin="1,2,0,0">
                 <Border.Style>
                     <Style TargetType="Border">
-                        <Setter Property="Background" Value="#16000000"/>
+                        <Setter Property="Background" Value="{StaticResource ShadowHardBrush}"/>
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding IsBare}" Value="True">
                                 <Setter Property="Background" Value="Transparent"/>
@@ -149,7 +149,7 @@
                         </StackPanel>
                         <!-- 状态行：始终显示数据源与更新时间（不再随是否有逐时隐藏） -->
                         <TextBlock Grid.Row="2" FontSize="10" Foreground="{Binding FgFaint}" Margin="0,3,0,0"
-                                   Text="{Binding Status}"/>
+                                   Text="{Binding Status}" TextTrimming="CharacterEllipsis"/>
                     </Grid>
 
                     <!-- 展开详情按钮 -->
@@ -192,7 +192,7 @@
                 <Border CornerRadius="14" Margin="2,4,0,0">
                     <Border.Style>
                         <Style TargetType="Border">
-                            <Setter Property="Background" Value="#0F000000"/>
+                            <Setter Property="Background" Value="{StaticResource ShadowSoftBrush}"/>
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding IsBare}" Value="True">
                                     <Setter Property="Background" Value="Transparent"/>
@@ -204,7 +204,7 @@
                 <Border CornerRadius="14" Margin="1,2,0,0">
                     <Border.Style>
                         <Style TargetType="Border">
-                            <Setter Property="Background" Value="#16000000"/>
+                            <Setter Property="Background" Value="{StaticResource ShadowHardBrush}"/>
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding IsBare}" Value="True">
                                     <Setter Property="Background" Value="Transparent"/>
@@ -222,7 +222,7 @@
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding IsBare}" Value="True">
                                     <Setter Property="Background" Value="Transparent"/>
-                                    <Setter Property="BorderBrush" Value="#26000000"/>
+                                    <Setter Property="BorderBrush" Value="{StaticResource BareStrokeBrush}"/>
                                     <Setter Property="BorderThickness" Value="1"/>
                                 </DataTrigger>
                             </Style.Triggers>

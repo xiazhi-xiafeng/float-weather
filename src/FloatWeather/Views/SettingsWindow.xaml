@@ -29,7 +29,7 @@
             <Setter Property="Margin" Value="0,0,0,14"/>
         </Style>
         <Style x:Key="ProviderRow" TargetType="Border">
-            <Setter Property="Background" Value="#14FFFFFF"/>
+            <Setter Property="Background" Value="{StaticResource InnerGlassBrush}"/>
             <Setter Property="BorderBrush" Value="{StaticResource StrokeBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="10"/>
@@ -49,8 +49,8 @@
 
     <Grid Margin="12,10,16,18">
         <!-- 柔和投影：多层半透明圆角，替代 DropShadowEffect（避免透明窗口的灰色直角） -->
-        <Border CornerRadius="16" Margin="2,4,0,0" Background="#0F000000"/>
-        <Border CornerRadius="16" Margin="1,2,0,0" Background="#16000000"/>
+        <Border CornerRadius="16" Margin="2,4,0,0" Background="{StaticResource ShadowSoftBrush}"/>
+        <Border CornerRadius="16" Margin="1,2,0,0" Background="{StaticResource ShadowHardBrush}"/>
         <Border CornerRadius="16" Background="{StaticResource AppBgSoftBrush}"
                 BorderBrush="{StaticResource StrokeStrongBrush}" BorderThickness="1">
         <Grid ClipToBounds="True">
@@ -89,7 +89,7 @@
                             <Setter Property="Background" Value="Transparent"/>
                             <Style.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="#33E5484D"/>
+                                    <Setter Property="Background" Value="{StaticResource CloseHoverBrush}"/>
                                 </Trigger>
                             </Style.Triggers>
                         </Style>
@@ -227,7 +227,7 @@
                                                    Foreground="{StaticResource TextFaintBrush}" Margin="0,2,0,0"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Border Padding="7,2" CornerRadius="6" Background="#1FFFFFFF"
+                                        <Border Padding="7,2" CornerRadius="6" Background="{StaticResource ChipGlassBrush}"
                                                 VerticalAlignment="Center" Margin="0,0,8,0">
                                             <TextBlock>
                                                 <TextBlock.Style>
@@ -262,7 +262,7 @@
                                                    Foreground="{StaticResource TextFaintBrush}" Margin="0,2,0,0"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Border Padding="7,2" CornerRadius="6" Background="#1FFFFFFF"
+                                        <Border Padding="7,2" CornerRadius="6" Background="{StaticResource ChipGlassBrush}"
                                                 VerticalAlignment="Center" Margin="0,0,8,0">
                                             <TextBlock>
                                                 <TextBlock.Style>
@@ -297,7 +297,7 @@
                                                    Foreground="{StaticResource TextFaintBrush}" Margin="0,2,0,0"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Border Padding="7,2" CornerRadius="6" Background="#1FFFFFFF"
+                                        <Border Padding="7,2" CornerRadius="6" Background="{StaticResource ChipGlassBrush}"
                                                 VerticalAlignment="Center" Margin="0,0,8,0">
                                             <TextBlock>
                                                 <TextBlock.Style>
@@ -332,7 +332,7 @@
                                                    Foreground="{StaticResource TextFaintBrush}" Margin="0,2,0,0"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Border Padding="7,2" CornerRadius="6" Background="#1FFFFFFF"
+                                        <Border Padding="7,2" CornerRadius="6" Background="{StaticResource ChipGlassBrush}"
                                                 VerticalAlignment="Center" Margin="0,0,8,0">
                                             <TextBlock Text="免费" FontSize="10" FontWeight="SemiBold"
                                                        Foreground="{StaticResource SuccessBrush}"/>
@@ -355,7 +355,7 @@
                                                    Foreground="{StaticResource TextFaintBrush}" Margin="0,2,0,0"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Border Padding="7,2" CornerRadius="6" Background="#1FFFFFFF"
+                                        <Border Padding="7,2" CornerRadius="6" Background="{StaticResource ChipGlassBrush}"
                                                 VerticalAlignment="Center" Margin="0,0,8,0">
                                             <TextBlock Text="免费" FontSize="10" FontWeight="SemiBold"
                                                        Foreground="{StaticResource SuccessBrush}"/>
@@ -378,7 +378,7 @@
                                                    Foreground="{StaticResource TextFaintBrush}" Margin="0,2,0,0"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Border Padding="7,2" CornerRadius="6" Background="#1FFFFFFF"
+                                        <Border Padding="7,2" CornerRadius="6" Background="{StaticResource ChipGlassBrush}"
                                                 VerticalAlignment="Center">
                                             <TextBlock Text="免费" FontSize="10" FontWeight="SemiBold"
                                                        Foreground="{StaticResource SuccessBrush}"/>
@@ -401,7 +401,7 @@
                                                    Foreground="{StaticResource TextFaintBrush}" Margin="0,2,0,0"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Border Padding="7,2" CornerRadius="6" Background="#1FFFFFFF"
+                                        <Border Padding="7,2" CornerRadius="6" Background="{StaticResource ChipGlassBrush}"
                                                 VerticalAlignment="Center" Margin="0,0,8,0">
                                             <TextBlock>
                                                 <TextBlock.Style>
@@ -444,24 +444,24 @@
                                                            Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
                                             </StackPanel>
                                             <Border Grid.Column="1" Padding="8,3" CornerRadius="7"
-                                                    Background="#1FFFFFFF" VerticalAlignment="Center">
+                                                    Background="{StaticResource ChipGlassBrush}" VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding StateText}" FontSize="11" FontWeight="SemiBold"
                                                            VerticalAlignment="Center">
                                                     <TextBlock.Style>
                                                         <Style TargetType="TextBlock">
-                                                            <Setter Property="Foreground" Value="#99FFFFFF"/>
+                                                            <Setter Property="Foreground" Value="{StaticResource TextLowBrush}"/>
                                                             <Style.Triggers>
                                                                 <DataTrigger Binding="{Binding StateText}" Value="正常">
-                                                                    <Setter Property="Foreground" Value="#A3E635"/>
+                                                                    <Setter Property="Foreground" Value="{StaticResource SuccessBrush}"/>
                                                                 </DataTrigger>
                                                                 <DataTrigger Binding="{Binding StateText}" Value="熔断中">
-                                                                    <Setter Property="Foreground" Value="#FF8A80"/>
+                                                                    <Setter Property="Foreground" Value="{StaticResource StatusDangerBrush}"/>
                                                                 </DataTrigger>
                                                                 <DataTrigger Binding="{Binding StateText}" Value="未配置">
-                                                                    <Setter Property="Foreground" Value="#66FFFFFF"/>
+                                                                    <Setter Property="Foreground" Value="{StaticResource TextFaintBrush}"/>
                                                                 </DataTrigger>
                                                                 <DataTrigger Binding="{Binding StateText}" Value="失败1次">
-                                                                    <Setter Property="Foreground" Value="#FFD166"/>
+                                                                    <Setter Property="Foreground" Value="{StaticResource StatusWarnBrush}"/>
                                                                 </DataTrigger>
                                                             </Style.Triggers>
                                                         </Style>

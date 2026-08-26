@@ -94,6 +94,7 @@ public partial class App : System.Windows.Application
         services.AddSingleton<CityResolver>();
         services.AddSingleton<IpLocationService>();
         services.AddSingleton<IconService>();
+        services.AddSingleton<TempHistoryStore>();
         services.AddSingleton<UiStateService>();
         services.AddSingleton<AutoStartService>();
         services.AddSingleton<SourceManager>();
@@ -107,6 +108,9 @@ public partial class App : System.Windows.Application
         services.AddSingleton<SettingsWindow>();
 
         Services = services.BuildServiceProvider();
+
+        // 修复开机自启路径漂移（程序被移动/换目录后自动重注册到当前 exe）
+        Services.GetRequiredService<AutoStartService>().RepairIfDrift();
 
         var floater = Services.GetRequiredService<FloaterWindow>();
         floater.Show();
