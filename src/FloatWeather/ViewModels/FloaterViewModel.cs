@@ -103,16 +103,6 @@ public partial class FloaterViewModel : ObservableObject
     private static System.Windows.Media.Brush Res(string key) =>
         (System.Windows.Media.Brush)System.Windows.Application.Current.Resources[key];
 
-    /// <summary>相对时间文案：N 分钟前 / N 小时前</summary>
-    private static string Ago(DateTime t)
-    {
-        var span = DateTime.Now - t;
-        if (span < TimeSpan.FromSeconds(60)) return "刚刚";
-        if (span < TimeSpan.FromHours(1)) return $"{(int)span.TotalMinutes}分钟前";
-        if (span < TimeSpan.FromDays(1)) return $"{(int)span.TotalHours}小时前";
-        return $"{(int)span.TotalDays}天前";
-    }
-
     public async Task RefreshAsync()
     {
         if (IsBusy) return;
@@ -146,7 +136,8 @@ public partial class FloaterViewModel : ObservableObject
             HasHumidity = (n?.Humidity ?? 0) > 0;
             Humidity = HasHumidity ? $"湿度 {n!.Humidity}%" : "";
             CityName = _config.Weather.CityName;
-            Status = result is null ? "数据不可用" : $"{result.Source} · 更新于 {result.FetchedAt:HH:mm} · {Ago(result.FetchedAt)}";
+            // 悬浮窗列宽有限，只保留“数据源 + 更新时间”两项关键信息，避免结尾被裁切
+            Status = result is null ? "数据不可用" : $"{result.Source} · 更新于 {result.FetchedAt:HH:mm}";
 
             // 官方图标字体：先确保字体资源就绪，再切字形（失败回退 emoji）
             if (n is not null)

@@ -149,7 +149,7 @@
                         </StackPanel>
                         <!-- 状态行：始终显示数据源与更新时间（不再随是否有逐时隐藏） -->
                         <TextBlock Grid.Row="2" FontSize="10" Foreground="{Binding FgFaint}" Margin="0,3,0,0"
-                                   Text="{Binding Status}"/>
+                                   Text="{Binding Status}" TextTrimming="CharacterEllipsis"/>
                     </Grid>
 
                     <!-- 展开详情按钮 -->

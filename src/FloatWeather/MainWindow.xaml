@@ -88,34 +88,32 @@
                             </Grid.ColumnDefinitions>
 
                             <!-- 大图标徽章 -->
-                            <Border Width="76" Height="76" CornerRadius="22"
+                            <Border Width="66" Height="66" CornerRadius="20"
                                     Background="{Binding Theme.InnerBrush}"
                                     BorderBrush="{Binding Theme.StrokeBrush}" BorderThickness="1"
                                     VerticalAlignment="Center" Margin="0,0,14,0">
                                 <TextBlock Text="{Binding IconText}" FontFamily="{Binding IconFont}"
-                                           FontSize="46" Foreground="{Binding Theme.AccentBrush}"
+                                           FontSize="42" Foreground="{Binding Theme.AccentBrush}"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
 
-                            <!-- 温度 + 天气 -->
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="{Binding Temperature}" FontSize="52" FontWeight="Bold"
-                                               Foreground="{StaticResource TextHighBrush}"
-                                               FontFamily="Segoe UI Variable Display, Segoe UI"/>
-                                    <TextBlock Text="{Binding WeatherText}" FontSize="16"
-                                               Foreground="{StaticResource TextMidBrush}"
-                                               Margin="10,0,0,8" VerticalAlignment="Bottom"/>
-                                </StackPanel>
+                            <!-- 温度 + 天气 + 体感：温度独占一行，避免被相邻文字挤出裁切导致 ° 与末位丢失 -->
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,10,0">
+                                <TextBlock Text="{Binding Temperature}" FontSize="44" FontWeight="Bold"
+                                           Foreground="{StaticResource TextHighBrush}"
+                                           FontFamily="Segoe UI Variable Display, Segoe UI"/>
+                                <TextBlock Text="{Binding WeatherText}" FontSize="15"
+                                           Foreground="{StaticResource TextMidBrush}"
+                                           Margin="0,3,0,0" TextTrimming="CharacterEllipsis"/>
                                 <TextBlock Text="{Binding FeelsLike}" FontSize="12"
                                            Foreground="{StaticResource TextLowBrush}" Margin="0,4,0,0"/>
                             </StackPanel>
 
-                            <!-- 体感/风/湿度 -->
-                            <StackPanel Grid.Column="2" VerticalAlignment="Bottom" Margin="16,0,0,2">
+                            <!-- 风向/湿度等明细 -->
+                            <StackPanel Grid.Column="2" VerticalAlignment="Bottom" Margin="10,0,0,2">
                                 <TextBlock Text="{Binding Detail}" FontSize="12"
                                            Foreground="{StaticResource TextLowBrush}"
-                                           TextAlignment="Right" MaxWidth="120" TextWrapping="Wrap"/>
+                                           TextAlignment="Right" MaxWidth="104" TextWrapping="Wrap"/>
                             </StackPanel>
                         </Grid>
 
