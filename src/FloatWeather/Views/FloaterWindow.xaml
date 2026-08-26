@@ -41,7 +41,8 @@
                     </Style>
                 </Border.Style>
             </Border>
-            <Border CornerRadius="18" MouseLeftButtonDown="DragMove_MouseLeftButtonDown">
+            <Border x:Name="Card" CornerRadius="18"
+                    MouseLeftButtonDown="DragMove_MouseLeftButtonDown">
                 <Border.Style>
                     <Style TargetType="Border">
                         <Setter Property="Background" Value="{Binding Theme.GlassBrush}"/>
@@ -121,7 +122,7 @@
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="{Binding Temperature}" FontSize="30" FontWeight="SemiBold"
+                            <TextBlock x:Name="TempText" Text="{Binding Temperature, NotifyOnTargetUpdated=True}" FontSize="30" FontWeight="SemiBold"
                                        Foreground="{Binding FgHigh}" VerticalAlignment="Bottom"
                                        FontFamily="Segoe UI Variable Display, Segoe UI"/>
                             <TextBlock Grid.Column="1" Text="{Binding WeatherText}" FontSize="13"
@@ -221,8 +222,8 @@
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding IsBare}" Value="True">
                                     <Setter Property="Background" Value="Transparent"/>
-                                    <Setter Property="BorderBrush" Value="Transparent"/>
-                                    <Setter Property="BorderThickness" Value="0"/>
+                                    <Setter Property="BorderBrush" Value="#26000000"/>
+                                    <Setter Property="BorderThickness" Value="1"/>
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>

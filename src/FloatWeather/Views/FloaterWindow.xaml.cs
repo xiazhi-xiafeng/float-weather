@@ -1,8 +1,10 @@
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using FloatWeather.Services;
 using Microsoft.Win32;
 using FloatWeather.ViewModels;
@@ -27,6 +29,19 @@ public partial class FloaterWindow : Window
     private ToolStripMenuItem? _trayFloater;
     private ToolStripMenuItem? _trayClickThrough;
     private bool _clickThrough;
+
+    // 悬浮窗右键菜单（WPF）+ 详情窗防重复
+    private System.Windows.Controls.ContextMenu? _floaterContextMenu;
+    private System.Windows.Controls.MenuItem? _menuVisible;
+    private System.Windows.Controls.MenuItem? _menuClickThrough;
+    private System.Windows.Controls.MenuItem? _menuBare;
+    private System.Windows.Controls.MenuItem? _menuAutostart;
+    private Window? _detailWindow;
+
+    // 交互增强：逐时浮层延迟关闭 + 低透明度 hover 显形 + 穿透悬停提示
+    private readonly System.Windows.Threading.DispatcherTimer _hourlyCloseDebounce;
+    private readonly System.Windows.Threading.DispatcherTimer _ctHoverTimer;
+    private bool _ctNotified;
 
     public FloaterWindow(FloaterViewModel vm, ConfigService config,
         UiStateService ui, AutoStartService autoStart)
@@ -55,6 +70,24 @@ public partial class FloaterWindow : Window
             SampleBrightness();
         };
 
+        // 逐时浮层延迟关闭：鼠标从卡片移到浮层途中不闪关，停留 250ms 后再关
+        _hourlyCloseDebounce = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(250)
+        };
+        _hourlyCloseDebounce.Tick += (_, _) =>
+        {
+            _hourlyCloseDebounce.Stop();
+            HourlyPopup.IsOpen = false;
+        };
+
+        // 穿透悬停提示：只在穿透开启且本窗可见时启动低频率轮询
+        _ctHoverTimer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(600)
+        };
+        _ctHoverTimer.Tick += (_, _) => OnCtHoverTick();
+
         _ui.Load();
         _clickThrough = _ui.ClickThrough;   // 恢复上次的穿透状态
         RestorePosition();
@@ -65,6 +98,9 @@ public partial class FloaterWindow : Window
             SetClickThrough(_clickThrough, notify: false);
             SetAppearance(_ui.DisplayMode == FloaterDisplayMode.Bare, _ui.Opacity);
             InitializeTray();
+            InitializeContextMenu();
+            TempText.AddHandler(System.Windows.Data.Binding.TargetUpdatedEvent,
+                new EventHandler<System.Windows.Data.DataTransferEventArgs>(OnTempTargetUpdated));
             if (!_ui.FloaterVisible) Hide();
             await _vm.RefreshAsync();
             _timer.Start();
@@ -80,6 +116,8 @@ public partial class FloaterWindow : Window
             _ui.FloaterTop = Top;
             _ui.Save();
             _brightDebounce.Stop();
+            _hourlyCloseDebounce.Stop();
+            _ctHoverTimer.Stop();
             Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
             _tray?.Dispose();
         };
@@ -186,6 +224,12 @@ public partial class FloaterWindow : Window
     /// <summary>拖拽移动窗口</summary>
     private void DragMove_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
+        // 双击整卡打开详情，单击左键才进入拖拽（DragMove 拖拽与双击互不冲突）
+        if (e.ClickCount >= 2 && e.ButtonState == MouseButtonState.Pressed)
+        {
+            OpenDetail();
+            return;
+        }
         if (e.ButtonState == MouseButtonState.Pressed)
         {
             try
@@ -200,13 +244,20 @@ public partial class FloaterWindow : Window
     /// <summary>悬停显示逐时天气</summary>
     private void Floater_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
     {
-        if (!_clickThrough && _vm.HasHourly)
+        _hourlyCloseDebounce.Stop();
+        if (_clickThrough) return;
+        // 低透明度 hover 显形：透明度低时鼠标移入临时提亮，移出恢复基准值
+        if (Opacity < Math.Max(_vm.Opacity, 0.9))
+            Opacity = Math.Max(_vm.Opacity, 0.9);
+        if (_vm.HasHourly)
             HourlyPopup.IsOpen = true;
     }
 
     private void Floater_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
     {
-        HourlyPopup.IsOpen = false;
+        Opacity = _vm.Opacity;   // 恢复基准透明度
+        _hourlyCloseDebounce.Stop();
+        _hourlyCloseDebounce.Start();
     }
 
     /// <summary>点击 ▶ 展开详情窗口</summary>
@@ -214,9 +265,80 @@ public partial class FloaterWindow : Window
 
     private void OpenDetail()
     {
+        // 防重复打开：详情窗已在显示则直接激活
+        if (_detailWindow is { IsLoaded: true })
+        {
+            _detailWindow.Activate();
+            return;
+        }
         var detail = new MainWindow(App.Services!.GetRequiredService<DetailViewModel>());
+        _detailWindow = detail;
+        detail.Closed += (_, _) => _detailWindow = null;
         detail.Show();
     }
+
+    /// <summary>悬浮窗右键菜单：与托盘菜单同构，方便穿透关闭后仍可快速操作</summary>
+    private void InitializeContextMenu()
+    {
+        _floaterContextMenu = new System.Windows.Controls.ContextMenu();
+
+        _menuVisible = NewMenuItem("隐藏悬浮窗");
+        _menuVisible.Click += (_, _) => SetFloaterVisible(!_ui.FloaterVisible);
+
+        var detail = NewMenuItem("打开详情");
+        detail.Click += (_, _) => OpenDetail();
+
+        var settings = NewMenuItem("设置");
+        settings.Click += (_, _) => OpenSettings();
+
+        _menuClickThrough = NewMenuItem("鼠标穿透", isCheckable: true);
+        _menuClickThrough.Click += (_, _) => SetClickThrough(!_clickThrough, notify: false);
+
+        _menuBare = NewMenuItem("桌面直显", isCheckable: true);
+        _menuBare.Click += (_, _) => SetAppearance(!(_ui.DisplayMode == FloaterDisplayMode.Bare), _ui.Opacity);
+
+        _menuAutostart = NewMenuItem("开机自启", isCheckable: true);
+        _menuAutostart.Click += (_, _) =>
+        {
+            _autoStart.Set(!_autoStart.IsEnabled);
+            _menuAutostart.IsChecked = _autoStart.IsEnabled;
+        };
+
+        var refresh = NewMenuItem("刷新天气");
+        refresh.Click += async (_, _) => await _vm.RefreshAsync();
+
+        var exit = NewMenuItem("退出");
+        exit.Click += (_, _) => System.Windows.Application.Current.Shutdown();
+
+        _floaterContextMenu.Items.Add(_menuVisible);
+        _floaterContextMenu.Items.Add(detail);
+        _floaterContextMenu.Items.Add(settings);
+        _floaterContextMenu.Items.Add(NewSeparator());
+        _floaterContextMenu.Items.Add(_menuClickThrough);
+        _floaterContextMenu.Items.Add(_menuBare);
+        _floaterContextMenu.Items.Add(_menuAutostart);
+        _floaterContextMenu.Items.Add(NewSeparator());
+        _floaterContextMenu.Items.Add(refresh);
+        _floaterContextMenu.Items.Add(exit);
+
+        Card.ContextMenu = _floaterContextMenu;
+        // 打开时同步各开关的当前状态
+        Card.ContextMenuOpening += (_, _) => SyncContextMenu();
+    }
+
+    /// <summary>按当前真实状态同步右键菜单（显示/隐藏文案 + 各开关勾选）</summary>
+    private void SyncContextMenu()
+    {
+        _menuVisible!.Header = _ui.FloaterVisible ? "隐藏悬浮窗" : "显示悬浮窗";
+        _menuClickThrough!.IsChecked = _clickThrough;
+        _menuBare!.IsChecked = _ui.DisplayMode == FloaterDisplayMode.Bare;
+        _menuAutostart!.IsChecked = _autoStart.IsEnabled;
+    }
+
+    private static System.Windows.Controls.MenuItem NewMenuItem(string header, bool isCheckable = false) =>
+        new System.Windows.Controls.MenuItem { Header = header, IsCheckable = isCheckable };
+
+    private static System.Windows.Controls.Separator NewSeparator() => new();
 
     /// <summary>打开设置窗口</summary>
     private void OpenSettings()
@@ -338,11 +460,51 @@ public partial class FloaterWindow : Window
         SetWindowLongPtr(hwnd, GWL_EXSTYLE, new IntPtr(ex));
 
         HourlyPopup.IsOpen = false;
+        // 穿透开启时低频率检测"鼠标已移到悬浮窗上"并给一次气泡提示，防止找不到解除入口
+        if (enabled) _ctHoverTimer.Start();
+        else { _ctHoverTimer.Stop(); _ctNotified = false; }
         if (notify)
             _tray?.ShowBalloonTip(2000, "悬浮天气",
                 enabled ? "已开启鼠标穿透 · 解除请点这里" : "已关闭鼠标穿透",
                 System.Windows.Forms.ToolTipIcon.Info);
         UpdateTrayChecks();
+    }
+
+    /// <summary>穿透开启时：鼠标若落在悬浮窗区域内，气泡提示一次"解除请点托盘"，移出后复位以便再次提示。</summary>
+    private void OnCtHoverTick()
+    {
+        if (!_clickThrough || Visibility != Visibility.Visible) { _ctNotified = false; return; }
+        if (IsCursorOverWindow())
+        {
+            if (!_ctNotified)
+            {
+                _ctNotified = true;
+                _tray?.ShowBalloonTip(2000, "悬浮天气", "鼠标穿透已开启 · 解除请点托盘悬浮天气图标",
+                    System.Windows.Forms.ToolTipIcon.Warning);
+            }
+        }
+        else _ctNotified = false;
+    }
+
+    /// <summary>温度值刷新时做一次轻声淡入转场，避免数字突变生硬</summary>
+    private void OnTempTargetUpdated(object? sender, DataTransferEventArgs e)
+    {
+        var fade = new DoubleAnimation(0.4, 1.0, TimeSpan.FromMilliseconds(300))
+        {
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+        };
+        TempText.BeginAnimation(OpacityProperty, fade);
+    }
+
+    /// <summary>本窗实际屏幕矩形（物理像素）内是否包含当前鼠标位置</summary>
+    private bool IsCursorOverWindow()
+    {
+        var hwnd = new WindowInteropHelper(this).Handle;
+        if (hwnd == IntPtr.Zero) return false;
+        return GetWindowRect(hwnd, out RECT r)
+            && GetCursorPos(out POINT pt)
+            && pt.X >= r.Left && pt.X <= r.Right
+            && pt.Y >= r.Top && pt.Y <= r.Bottom;
     }
 
     /// <summary>同步托盘菜单"显示/隐藏悬浮窗"与"鼠标穿透"两条的勾选与文案</summary>
@@ -444,4 +606,18 @@ public partial class FloaterWindow : Window
 
     [DllImport("user32.dll", EntryPoint = "SetWindowLongPtr", SetLastError = true)]
     private static extern IntPtr SetWindowLongPtr(IntPtr hwnd, int index, IntPtr newValue);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetWindowRect(IntPtr hwnd, out RECT lpRect);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetCursorPos(out POINT lpPoint);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RECT { public int Left, Top, Right, Bottom; }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct POINT { public int X, Y; }
 }
