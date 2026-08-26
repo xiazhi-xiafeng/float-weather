@@ -53,6 +53,16 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private int opacityPercent = 100;
     public System.Collections.ObjectModel.ObservableCollection<string> DisplayModeOptions { get; } = new() { "玻璃卡片", "桌面直显" };
 
+    // 贴边吸附触发距离（像素），即时写入 UI 状态并持久化（拖动时读取）
+    [ObservableProperty] private int snapThreshold = 12;
+
+    partial void OnSnapThresholdChanged(int value)
+    {
+        if (!_loaded) return;
+        _ui.SnapThreshold = Math.Clamp(value, 0, 60);
+        _ui.Save();
+    }
+
     // 和风数据源配置
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(QwConfigured))]
@@ -144,6 +154,7 @@ public partial class SettingsViewModel : ObservableObject
         FallbackProvider = string.IsNullOrWhiteSpace(w.FallbackProvider) ? "默认顺序" : w.FallbackProvider;
         DisplayMode = _ui.DisplayMode == FloaterDisplayMode.Bare ? "桌面直显" : "玻璃卡片";
         OpacityPercent = (int)Math.Round(_ui.Opacity * 100);
+        SnapThreshold = Math.Clamp((int)_ui.SnapThreshold, 0, 60);
 
         // 填充主/备可选数据源（已配置 Key 的源）
         ProviderNames.Clear();

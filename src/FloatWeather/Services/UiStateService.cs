@@ -33,6 +33,9 @@ public sealed class UiStateService
     /// <summary>全局透明度 0.2–1.0（重启后保持）</summary>
     public double Opacity { get; set; } = 1.0;
 
+    /// <summary>拖拽结束贴边吸附的触发距离（像素），0 表示关闭（重启后保持）</summary>
+    public double SnapThreshold { get; set; } = 12;
+
     /// <summary>显示外观被改动（供托盘、设置页双向同步）</summary>
     public event Action? AppearanceChanged;
     public void RaiseAppearanceChanged() => AppearanceChanged?.Invoke();
@@ -52,6 +55,8 @@ public sealed class UiStateService
                 DisplayMode = json.DisplayMode;
                 if (json.Opacity >= 0.2 && json.Opacity <= 1.0)
                     Opacity = json.Opacity;
+                if (json.SnapThreshold >= 0 && json.SnapThreshold <= 60)
+                    SnapThreshold = json.SnapThreshold;
             }
         }
         catch (Exception ex)

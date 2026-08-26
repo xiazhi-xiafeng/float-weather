@@ -1,6 +1,8 @@
 # float-weather · 悬浮天气
 
 > Windows 桌面悬浮天气小组件 —— 聚合 7 大天气数据源，主备切换 + 故障自动降级，常驻桌面、置顶半透明。
+>
+> 当前版本：**v0.1.0**（分支 `v0.1.0`）
 
 ---
 
@@ -140,3 +142,15 @@ public interface IWeatherProvider
 - 开源依赖：.NET / WPF / CommunityToolkit.Mvvm / Serilog / Portable.BouncyCastle 等
 
 *本项目为个人学习 / 自用项目，请勿将其用于商业用途或对数据源造成高频请求压力。*
+
+---
+
+## 版本记录
+
+### v0.1.0（当前）
+
+首个可用版本，功能覆盖：
+
+- 悬浮小组件 + 详情窗口 + 设置窗口 + 系统托盘 + 开机自启 + 单实例
+- 聚合 7 大天气数据源（和风 / 高德 / 心知 / OpenWeather / Open-Meteo / wttr.in / 中国天气网）
+- 主备切换、故障熔断降级、5s 超时、内存缓存、动态主题
