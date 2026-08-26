@@ -36,6 +36,16 @@
             <SolidColorBrush x:Key="TextLowBrush" Color="#99FFFFFF"/>
             <SolidColorBrush x:Key="TextFaintBrush" Color="#66FFFFFF"/>
 
+            <!-- ============ 收敛的魔法值（阴影层 / 芯片 / 状态色 / 关闭悬停） ============ -->
+            <SolidColorBrush x:Key="ShadowSoftBrush" Color="#0F000000"/>
+            <SolidColorBrush x:Key="ShadowHardBrush" Color="#16000000"/>
+            <SolidColorBrush x:Key="InnerGlassBrush" Color="#14FFFFFF"/>
+            <SolidColorBrush x:Key="ChipGlassBrush" Color="#1FFFFFFF"/>
+            <SolidColorBrush x:Key="BareStrokeBrush" Color="#26000000"/>
+            <SolidColorBrush x:Key="CloseHoverBrush" Color="#33E5484D"/>
+            <SolidColorBrush x:Key="StatusWarnBrush" Color="#FFD166"/>
+            <SolidColorBrush x:Key="StatusDangerBrush" Color="#FF8A80"/>
+
             <!-- ============ TextBox ============ -->
             <Style TargetType="TextBox">
                 <Setter Property="Foreground" Value="#FFFFFF"/>
@@ -139,8 +149,8 @@
                                        Focusable="False" PopupAnimation="Fade" StaysOpen="False"
                                        IsOpen="{TemplateBinding IsDropDownOpen}">
                                     <Grid Margin="2,4,4,6">
-                                        <Border CornerRadius="10" Margin="2,4,0,0" Background="#0F000000"/>
-                                        <Border CornerRadius="10" Margin="1,2,0,0" Background="#16000000"/>
+                                        <Border CornerRadius="10" Margin="2,4,0,0" Background="{StaticResource ShadowSoftBrush}"/>
+                                        <Border CornerRadius="10" Margin="1,2,0,0" Background="{StaticResource ShadowHardBrush}"/>
                                         <Border Background="#FA1C2531" BorderBrush="{StaticResource StrokeStrongBrush}"
                                                 BorderThickness="1" CornerRadius="10" Margin="0,0,0,0"
                                                 MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"

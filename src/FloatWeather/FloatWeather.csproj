@@ -7,6 +7,16 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
+
+    <!-- 发布/打包：版本号与 exe 图标 -->
+    <Version>0.1.2</Version>
+    <AssemblyVersion>0.1.2.0</AssemblyVersion>
+    <FileVersion>0.1.2.0</FileVersion>
+    <ApplicationIcon>Resources\tray.ico</ApplicationIcon>
+
+    <!-- 单文件发布（默认依赖 .NET 8 运行时；如需免安装自包含，发布时加 -r win-x64 -self-contained true） -->
+    <PublishSingleFile>true</PublishSingleFile>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
   </PropertyGroup>
 
   <ItemGroup>

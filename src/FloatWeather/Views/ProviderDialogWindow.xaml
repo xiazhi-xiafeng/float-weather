@@ -19,8 +19,8 @@
 
     <Grid Margin="12,10,14,14">
         <!-- 柔和投影：多层半透明圆角，替代 DropShadowEffect（避免透明窗口的灰色直角） -->
-        <Border CornerRadius="14" Margin="2,4,0,0" Background="#0F000000"/>
-        <Border CornerRadius="14" Margin="1,2,0,0" Background="#16000000"/>
+        <Border CornerRadius="14" Margin="2,4,0,0" Background="{StaticResource ShadowSoftBrush}"/>
+        <Border CornerRadius="14" Margin="1,2,0,0" Background="{StaticResource ShadowHardBrush}"/>
         <Border CornerRadius="14" Background="{StaticResource AppBgSoftBrush}"
                 BorderBrush="{StaticResource StrokeStrongBrush}" BorderThickness="1"
                 Padding="18,14">

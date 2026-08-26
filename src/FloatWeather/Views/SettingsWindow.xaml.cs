@@ -15,6 +15,13 @@ public partial class SettingsWindow : Window
         InitializeComponent();
         DataContext = vm;
         _floater = floater;
+        IsVisibleChanged += (_, e) =>
+        {
+            // 设置窗显示时监听数据源健康状态，隐藏时停止
+            if (vm is null) return;
+            if (e.NewValue is true) { vm.RefreshHealth(); vm.StartHealthMonitoring(); }
+            else vm.StopHealthMonitoring();
+        };
         Closing += (_, e) => { e.Cancel = true; Hide(); };
     }
 

@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using FloatWeather.Services;
 using FloatWeather.Views;
 using Microsoft.Extensions.DependencyInjection;
+using System.Windows.Threading;
 
 namespace FloatWeather.ViewModels;
 
@@ -31,6 +32,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly UiStateService _ui;
     private bool _loaded;
     private bool _suppressAppearance;   // 外部（托盘）同步时抑制回写，避免双向循环
+    private readonly DispatcherTimer _healthTimer;   // 数据源状态自动刷新
 
     [ObservableProperty] private string cityName = "";
     [ObservableProperty] private int refreshIntervalMinutes = 30;
@@ -108,7 +110,17 @@ public partial class SettingsViewModel : ObservableObject
         ReloadFromConfig();
         RefreshHealth();
         _loaded = true;    // 初始化完成后，属性变更即可即时应用到悬浮窗
+
+        // 设置窗打开期间每 5 秒自动刷新数据源健康状态，熔断/失败不用手动点刷新即可实时看到
+        _healthTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+        _healthTimer.Tick += (_, _) => RefreshHealth();
     }
+
+    /// <summary>设置窗显示时开始监听数据源健康状态</summary>
+    public void StartHealthMonitoring() => _healthTimer.Start();
+
+    /// <summary>设置窗隐藏时停止监听，避免后台空转</summary>
+    public void StopHealthMonitoring() => _healthTimer.Stop();
 
     /// <summary>托盘改动外观（桌面直显/透明度）时同步到设置页，抑制回写避免循环</summary>
     private void OnExternalAppearanceChanged()
@@ -173,7 +185,8 @@ public partial class SettingsViewModel : ObservableObject
         SeniverseKey = _config.Seniverse.Key;
     }
 
-    private void RefreshHealth()
+    /// <summary>刷新数据源健康列表（公开：窗口显示与定时器都会调用）</summary>
+    public void RefreshHealth()
     {
         Sources.Clear();
         foreach (var h in _sourceManager.Health.Values)

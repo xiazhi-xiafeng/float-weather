@@ -38,16 +38,6 @@ public partial class DetailViewModel : ObservableObject
         CityName = config.Weather.CityName;
     }
 
-    /// <summary>相对时间文案：N 分钟前 / N 小时前</summary>
-    private static string Ago(DateTime t)
-    {
-        var span = DateTime.Now - t;
-        if (span < TimeSpan.FromSeconds(60)) return "刚刚";
-        if (span < TimeSpan.FromHours(1)) return $"{(int)span.TotalMinutes}分钟前";
-        if (span < TimeSpan.FromDays(1)) return $"{(int)span.TotalHours}小时前";
-        return $"{(int)span.TotalDays}天前";
-    }
-
     public async Task LoadAsync()
     {
         try
@@ -77,7 +67,7 @@ public partial class DetailViewModel : ObservableObject
             WeatherText = n.WeatherText;
             Detail = $"{n.WindDir} {n.WindScale:0.#}级 · 湿度 {n.Humidity}%";
             Aqi = n.Aqi > 0 ? $"空气 {n.AqiCategory} {n.Aqi}" : "";
-            Status = $"{r.Source} · 更新于 {r.FetchedAt:MM-dd HH:mm} · {Ago(r.FetchedAt)}";
+            Status = $"{r.Source} · 更新于 {r.FetchedAt:MM-dd HH:mm} · {TimeText.Ago(r.FetchedAt)}";
             Theme = ThemeResolver.Resolve(n.IconCode, n.WeatherText, DateTime.Now);
 
             Hourly.Clear();

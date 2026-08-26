@@ -21,8 +21,8 @@
 
     <Grid Margin="12,10,16,18">
         <!-- 柔和投影：多层半透明圆角，替代 DropShadowEffect（避免透明窗口的灰色直角） -->
-        <Border CornerRadius="16" Margin="2,4,0,0" Background="#0F000000"/>
-        <Border CornerRadius="16" Margin="1,2,0,0" Background="#16000000"/>
+        <Border CornerRadius="16" Margin="2,4,0,0" Background="{StaticResource ShadowSoftBrush}"/>
+        <Border CornerRadius="16" Margin="1,2,0,0" Background="{StaticResource ShadowHardBrush}"/>
         <Border CornerRadius="16" Background="{Binding Theme.GlassBrush}"
                 BorderBrush="{Binding Theme.StrokeBrush}" BorderThickness="1">
         <Grid ClipToBounds="True">
@@ -62,7 +62,7 @@
                             <Setter Property="Background" Value="Transparent"/>
                             <Style.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="#33E5484D"/>
+                                    <Setter Property="Background" Value="{StaticResource CloseHoverBrush}"/>
                                 </Trigger>
                             </Style.Triggers>
                         </Style>
@@ -123,7 +123,7 @@
                                 <TextBlock Text="{Binding CityName}" FontSize="13" FontWeight="SemiBold"
                                            Foreground="{StaticResource TextHighBrush}"/>
                                 <Border Margin="8,0,0,0" Padding="7,2" CornerRadius="6"
-                                        Background="#26FFFFFF" VerticalAlignment="Center">
+                                        Background="{StaticResource PanelGlassBrush}" VerticalAlignment="Center">
                                     <TextBlock Text="{Binding Aqi}" FontSize="10"
                                                Foreground="{StaticResource TextMidBrush}"/>
                                 </Border>
