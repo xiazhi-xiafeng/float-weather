@@ -179,42 +179,61 @@ public partial class FloaterWindow : Window
         _brightDebounce.Start();
     }
 
-    /// <summary>贴边吸附：拖拽结束时若贴近屏幕某一边缘(阈值内)，自动对齐到该边缘。</summary>
+    /// <summary>获取悬浮窗所在显示器的工作区（排除了任务栏/停靠栏），已从物理像素换算回 DIP。</summary>
+    private (double L, double T, double R, double B) GetWorkAreaBounds()
+    {
+        double dx = 1, dy = 1;
+        try
+        {
+            var s = VisualTreeHelper.GetDpi(this);
+            dx = s.DpiScaleX; dy = s.DpiScaleY;
+        }
+        catch { /* 保留 1.0 */ }
+
+        // 以悬浮窗中心所在的显示器为准
+        int cx, cy;
+        if (double.IsFinite(Left) && double.IsFinite(Top) && double.IsFinite(Width) && double.IsFinite(Height))
+        {
+            cx = (int)Math.Round((Left + Width / 2) * dx);
+            cy = (int)Math.Round((Top + Height / 2) * dy);
+        }
+        else
+        {
+            cx = System.Windows.Forms.Cursor.Position.X;
+            cy = System.Windows.Forms.Cursor.Position.Y;
+        }
+
+        var wa = System.Windows.Forms.Screen.FromPoint(new System.Drawing.Point(cx, cy)).WorkingArea;
+        return (wa.Left / dx, wa.Top / dy, wa.Right / dx, wa.Bottom / dy);
+    }
+
+    /// <summary>贴边吸附：拖拽结束时若贴近屏幕某一边缘(阈值内)，自动对齐到该边缘；
+    /// 无论是否触发吸附，都钳位到所在显示器的工作区内，保证四边都不会跑出屏幕或被任务栏遮挡。</summary>
     private void SnapWindowToEdge()
     {
+        double w = double.IsFinite(Width) ? Width : ActualWidth;
+        double h = double.IsFinite(Height) ? Height : ActualHeight;
+        var (L, T, R, B) = GetWorkAreaBounds();
+
+        // 工作区可能小于窗口（极小屏/任务栏过大），兜底贴左上角，避免 Clamp 反串
+        double clampMaxX = L + Math.Max(0, (R - L) - w);
+        double clampMaxY = T + Math.Max(0, (B - T) - h);
+        double newLeft = Math.Clamp(Left, L, clampMaxX);
+        double newTop = Math.Clamp(Top, T, clampMaxY);
+
         double threshold = _ui.SnapThreshold;
-        if (threshold <= 0) return;   // 已关闭贴边吸附
-        var left = SystemParameters.VirtualScreenLeft;
-        var top = SystemParameters.VirtualScreenTop;
-        var right = left + SystemParameters.VirtualScreenWidth;
-        var bottom = top + SystemParameters.VirtualScreenHeight;
-
-        bool changed = false;
-        // 横向贴边
-        if (Math.Abs(Left - left) <= threshold && Left != left)
+        if (threshold > 0)
         {
-            Left = left;
-            changed = true;
-        }
-        else if (Math.Abs(Left + Width - right) <= threshold && Left + Width != right)
-        {
-            Left = right - Width;
-            changed = true;
-        }
-        // 纵向贴边
-        if (Math.Abs(Top - top) <= threshold && Top != top)
-        {
-            Top = top;
-            changed = true;
-        }
-        else if (Math.Abs(Top + Height - bottom) <= threshold && Top + Height != bottom)
-        {
-            Top = bottom - Height;
-            changed = true;
+            if (Math.Abs(Left - L) <= threshold) newLeft = L;
+            else if (Math.Abs(Left + w - R) <= threshold) newLeft = R - w;
+            if (Math.Abs(Top - T) <= threshold) newTop = T;
+            else if (Math.Abs(Top + h - B) <= threshold) newTop = B - h;
         }
 
-        if (changed)
+        if (newLeft != Left || newTop != Top)
         {
+            Left = newLeft;
+            Top = newTop;
             _ui.FloaterLeft = Left;
             _ui.FloaterTop = Top;
             _ui.Save();
