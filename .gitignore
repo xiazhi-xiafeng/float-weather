@@ -44,6 +44,8 @@ results.txt
 # 手动/探测调研生成的临时校验文件（含抓取到的原始响应）
 _probe_*.txt
 _mweather_*.txt
+# 真机验证用截图与脚本
+.verify-screenshots/
 
 # ===== 系统文件 =====
 Thumbs.db
