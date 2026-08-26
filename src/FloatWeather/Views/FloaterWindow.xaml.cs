@@ -24,6 +24,7 @@ public partial class FloaterWindow : Window
     private readonly AutoStartService _autoStart;
     private readonly System.Windows.Threading.DispatcherTimer _timer;
     private readonly System.Windows.Threading.DispatcherTimer _brightDebounce;
+    private readonly System.Windows.Threading.DispatcherTimer _brightPeriodic;
     private System.Windows.Forms.NotifyIcon? _tray;
     private System.Windows.Forms.ToolStripMenuItem? _trayBare;
     private ToolStripMenuItem? _trayFloater;
@@ -70,6 +71,14 @@ public partial class FloaterWindow : Window
             SampleBrightness();
         };
 
+        // 背景亮度变化的低频兜底：拖动/显形/显示变化之外，桌面可能被其他窗口(如CMD)盖住导致背景变暗，
+        // 彼时无事件触发既无法及时换色。每 10s 复查一次（SampleBrightness 内部已判断 仅裸屏且可见 才取色，开销很小）。
+        _brightPeriodic = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(10)
+        };
+        _brightPeriodic.Tick += (_, _) => SampleBrightness();
+
         // 逐时浮层延迟关闭：鼠标从卡片移到浮层途中不闪关，停留 250ms 后再关
         _hourlyCloseDebounce = new System.Windows.Threading.DispatcherTimer
         {
@@ -110,6 +119,7 @@ public partial class FloaterWindow : Window
             LocationChanged += OnFloaterLocationChanged;
             Microsoft.Win32.SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
             if (Visibility == Visibility.Visible) SampleBrightness();
+            _brightPeriodic.Start();   // 低频兜底采样：背景被遮挡(无拖动事件)时也能换色
         };
         Closed += (_, _) =>
         {
@@ -118,6 +128,7 @@ public partial class FloaterWindow : Window
             _ui.Save();
             _vm.TrayTooltipReady -= UpdateTrayTooltip;
             _brightDebounce.Stop();
+            _brightPeriodic.Stop();
             _hourlyCloseDebounce.Stop();
             _ctHoverTimer.Stop();
             Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
@@ -565,15 +576,17 @@ public partial class FloaterWindow : Window
             var vsb = vst + SystemParameters.VirtualScreenHeight;
             double dx = scale.DpiScaleX, dy = scale.DpiScaleY;
 
-            // 取悬浮窗四周(紧贴边缘外侧)的小面片，避开窗内文字/图标像素
+            // 取悬浮窗四个对角"外侧紧邻"的小面片：面片完全在窗口外，避免采到窗内半透明像素/文字图标。
+            // 之前用窗口内侧 (Left+6,Top+4)，24px 面片大部分落在窗体上，深背景下半透明玻璃把亮度推高，
+            // 导致"亮背景误判"而一直使用深色文字（深背景看不清）。改为窗外后即为该角落桌面真实亮度。
             int grabW = Math.Max(16, (int)Math.Round(24 * dx));
             int grabH = Math.Max(12, (int)Math.Round(18 * dy));
             var corners = new[]
             {
-                (x: Left + 6,               y: Top + 4),
-                (x: Left + Width - 8,       y: Top + 4),
-                (x: Left + 6,               y: Top + Height - 10),
-                (x: Left + Width - 8,       y: Top + Height - 10),
+                (x: Left - grabW,      y: Top - grabH),
+                (x: Left + Width,      y: Top - grabH),
+                (x: Left - grabW,      y: Top + Height),
+                (x: Left + Width,      y: Top + Height),
             };
 
             double sum = 0;
