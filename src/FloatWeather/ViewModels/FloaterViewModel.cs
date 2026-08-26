@@ -17,7 +17,11 @@ public partial class FloaterViewModel : ObservableObject
     private readonly ConfigService _config;
     private readonly IconService _icons;
     private readonly IpLocationService _ip;
+    private readonly TempHistoryStore _history;
     private bool _ipLocated;   // 首次刷新前是否已尝试过 IP 定位（只定位一次）
+
+    /// <summary>刷新完成后触发，携带用于托盘悬停提示的天气摘要文本。</summary>
+    public event Action<string>? TrayTooltipReady;
 
     public ObservableCollection<HourPopupItem> Hourly { get; } = new();
 
@@ -49,12 +53,13 @@ public partial class FloaterViewModel : ObservableObject
     /// <summary>桌面直显时：背景偏暗则为 true，切换为白色文字以保证可读（由窗口采样桌面亮度驱动）</summary>
     [ObservableProperty] private bool isDarkBackground;
 
-    public FloaterViewModel(WeatherService weather, ConfigService config, IconService icons, IpLocationService ip)
+    public FloaterViewModel(WeatherService weather, ConfigService config, IconService icons, IpLocationService ip, TempHistoryStore history)
     {
         _weather = weather;
         _config = config;
         _icons = icons;
         _ip = ip;
+        _history = history;
         CityName = config.IsCitySetFromUser() ? config.Weather.CityName : "定位中…";
         UpdateTextBrushes();
     }
@@ -175,6 +180,22 @@ public partial class FloaterViewModel : ObservableObject
                     h.Temp >= nowTemp ? "▲" : "▼"));
             }
             HasHourly = Hourly.Count > 0;
+
+            // 记录一次温度观察（供详情窗"过去24h"趋势曲线），并发布托盘悬停提示摘要
+            if (n is not null)
+                _history.Record((double)n.Temp, result!.FetchedAt);
+
+            var tooltipParts = new List<string>();
+            if (!string.IsNullOrWhiteSpace(CityName)) tooltipParts.Add(CityName);
+            if (!string.IsNullOrWhiteSpace(Temperature) && Temperature != "--") tooltipParts.Add(Temperature);
+            if (!string.IsNullOrWhiteSpace(n?.WeatherText)) tooltipParts.Add(n!.WeatherText);
+            var extra = new List<string>();
+            if (HasHumidity) extra.Add(Humidity);
+            if (!string.IsNullOrWhiteSpace(Status) && Status != "数据不可用") extra.Add("更新 " + result?.FetchedAt.ToString("HH:mm"));
+            var tooltip = string.Join("  ·  ", tooltipParts);
+            if (extra.Count > 0) tooltip += "\n" + string.Join("  ·  ", extra);
+            if (tooltip.Length > 60) tooltip = tooltip[..60];
+            TrayTooltipReady?.Invoke(tooltip);
         }
         catch (Exception ex)
         {

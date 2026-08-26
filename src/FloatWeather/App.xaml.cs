@@ -94,6 +94,7 @@ public partial class App : System.Windows.Application
         services.AddSingleton<CityResolver>();
         services.AddSingleton<IpLocationService>();
         services.AddSingleton<IconService>();
+        services.AddSingleton<TempHistoryStore>();
         services.AddSingleton<UiStateService>();
         services.AddSingleton<AutoStartService>();
         services.AddSingleton<SourceManager>();

@@ -1,0 +1,8 @@
+<UserControl x:Class="FloatWeather.Views.TemperatureChart"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Width="Auto" Height="128">
+    <Grid ClipToBounds="True">
+        <Canvas x:Name="ChartCanvas" Background="Transparent"/>
+    </Grid>
+</UserControl>

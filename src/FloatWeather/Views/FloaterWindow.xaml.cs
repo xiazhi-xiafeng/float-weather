@@ -99,6 +99,7 @@ public partial class FloaterWindow : Window
             SetAppearance(_ui.DisplayMode == FloaterDisplayMode.Bare, _ui.Opacity);
             InitializeTray();
             InitializeContextMenu();
+            _vm.TrayTooltipReady += UpdateTrayTooltip;
             TempText.AddHandler(System.Windows.Data.Binding.TargetUpdatedEvent,
                 new EventHandler<System.Windows.Data.DataTransferEventArgs>(OnTempTargetUpdated));
             if (!_ui.FloaterVisible) Hide();
@@ -115,6 +116,7 @@ public partial class FloaterWindow : Window
             _ui.FloaterLeft = Left;
             _ui.FloaterTop = Top;
             _ui.Save();
+            _vm.TrayTooltipReady -= UpdateTrayTooltip;
             _brightDebounce.Stop();
             _hourlyCloseDebounce.Stop();
             _ctHoverTimer.Stop();
@@ -538,6 +540,14 @@ public partial class FloaterWindow : Window
             _trayClickThrough.Checked = _clickThrough;
         if (_trayBare is not null)
             _trayBare.Checked = _ui.DisplayMode == FloaterDisplayMode.Bare;
+    }
+
+    /// <summary>刷新后更新托盘图标悬停提示为实时天气摘要</summary>
+    private void UpdateTrayTooltip(string tooltip)
+    {
+        if (_tray is null) return;
+        // NotifyIcon.Text 上限 63 字符
+        _tray.Text = tooltip.Length > 63 ? tooltip[..62] + "…" : tooltip;
     }
 
     /// <summary>采样悬浮窗四周桌面亮度，驱动桌面直显下自动切换深/白文字。</summary>
