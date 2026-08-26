@@ -4,6 +4,7 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using FloatWeather.Services;
+using Microsoft.Win32;
 using FloatWeather.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -20,7 +21,7 @@ public partial class FloaterWindow : Window
     private readonly UiStateService _ui;
     private readonly AutoStartService _autoStart;
     private readonly System.Windows.Threading.DispatcherTimer _timer;
-    private readonly System.Windows.Threading.DispatcherTimer _brightTimer;
+    private readonly System.Windows.Threading.DispatcherTimer _brightDebounce;
     private System.Windows.Forms.NotifyIcon? _tray;
     private System.Windows.Forms.ToolStripMenuItem? _trayBare;
     private ToolStripMenuItem? _trayFloater;
@@ -42,12 +43,17 @@ public partial class FloaterWindow : Window
         };
         _timer.Tick += async (_, _) => await _vm.RefreshAsync();
 
-        // 桌面直显下的背景亮度感知：定期采样悬浮窗区域桌面亮度，自动切换深/白文字
-        _brightTimer = new System.Windows.Threading.DispatcherTimer
+        // 桌面直显下的背景亮度感知：改为"拖拽结束/显示变化"事件驱动采样，
+        // 用 300ms 防抖只保留"停下那一刻"的一次采样，替代原先的 2s 常驻轮询
+        _brightDebounce = new System.Windows.Threading.DispatcherTimer
         {
-            Interval = TimeSpan.FromSeconds(2)
+            Interval = TimeSpan.FromMilliseconds(300)
         };
-        _brightTimer.Tick += (_, _) => SampleBrightness();
+        _brightDebounce.Tick += (_, _) =>
+        {
+            _brightDebounce.Stop();
+            SampleBrightness();
+        };
 
         _ui.Load();
         _clickThrough = _ui.ClickThrough;   // 恢复上次的穿透状态
@@ -62,14 +68,19 @@ public partial class FloaterWindow : Window
             if (!_ui.FloaterVisible) Hide();
             await _vm.RefreshAsync();
             _timer.Start();
-            _brightTimer.Start();
+
+            // 事件驱动采样：拖动/显示变化触发；显示器热插拔/分辨率变更兜底拉回
+            LocationChanged += OnFloaterLocationChanged;
+            Microsoft.Win32.SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
+            if (Visibility == Visibility.Visible) SampleBrightness();
         };
         Closed += (_, _) =>
         {
             _ui.FloaterLeft = Left;
             _ui.FloaterTop = Top;
             _ui.Save();
-            _brightTimer.Stop();
+            _brightDebounce.Stop();
+            Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
             _tray?.Dispose();
         };
     }
@@ -97,12 +108,92 @@ public partial class FloaterWindow : Window
         }
     }
 
+    /// <summary>显示器热插拔/分辨率变更：窗口可能被挤出可视区，拉回最近屏幕默认角并持久化。</summary>
+    private void OnDisplaySettingsChanged(object? sender, EventArgs e)
+    {
+        // SystemEvents 在后台线程回调，切回 UI 线程处理
+        Dispatcher.BeginInvoke(EnsureOnScreen);
+    }
+
+    /// <summary>确保悬浮窗位于当前虚拟屏内；掉出则复位到主屏右下角。</summary>
+    private void EnsureOnScreen()
+    {
+        var left = SystemParameters.VirtualScreenLeft;
+        var top = SystemParameters.VirtualScreenTop;
+        var right = left + SystemParameters.VirtualScreenWidth;
+        var bottom = top + SystemParameters.VirtualScreenHeight;
+        double cx = Left + Width / 2;
+        double cy = Top + Height / 2;
+        if (cx >= left && cx <= right && cy >= top && cy <= bottom) return; // 仍在可视区
+
+        Left = right - Width - 16;
+        Top = bottom - Height + 4;
+        _ui.FloaterLeft = Left;
+        _ui.FloaterTop = Top;
+        _ui.Save();
+        SampleBrightness();
+    }
+
+    /// <summary>拖拽/移动会高频触发 LocationChanged，用防抖只采一次"停下后"的桌面亮度。</summary>
+    private void OnFloaterLocationChanged(object? sender, EventArgs e)
+    {
+        _brightDebounce.Stop();
+        _brightDebounce.Start();
+    }
+
+    /// <summary>贴边吸附：拖拽结束时若贴近屏幕某一边缘(阈值内)，自动对齐到该边缘。</summary>
+    private void SnapWindowToEdge()
+    {
+        double threshold = _ui.SnapThreshold;
+        if (threshold <= 0) return;   // 已关闭贴边吸附
+        var left = SystemParameters.VirtualScreenLeft;
+        var top = SystemParameters.VirtualScreenTop;
+        var right = left + SystemParameters.VirtualScreenWidth;
+        var bottom = top + SystemParameters.VirtualScreenHeight;
+
+        bool changed = false;
+        // 横向贴边
+        if (Math.Abs(Left - left) <= threshold && Left != left)
+        {
+            Left = left;
+            changed = true;
+        }
+        else if (Math.Abs(Left + Width - right) <= threshold && Left + Width != right)
+        {
+            Left = right - Width;
+            changed = true;
+        }
+        // 纵向贴边
+        if (Math.Abs(Top - top) <= threshold && Top != top)
+        {
+            Top = top;
+            changed = true;
+        }
+        else if (Math.Abs(Top + Height - bottom) <= threshold && Top + Height != bottom)
+        {
+            Top = bottom - Height;
+            changed = true;
+        }
+
+        if (changed)
+        {
+            _ui.FloaterLeft = Left;
+            _ui.FloaterTop = Top;
+            _ui.Save();
+        }
+    }
+
     /// <summary>拖拽移动窗口</summary>
     private void DragMove_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (e.ButtonState == MouseButtonState.Pressed)
         {
-            try { DragMove(); } catch { /* 忽略拖拽异常 */ }
+            try
+            {
+                DragMove();
+                SnapWindowToEdge();   // 拖拽结束后贴边
+            }
+            catch { /* 忽略拖拽异常 */ }
         }
     }
 
@@ -206,6 +297,7 @@ public partial class FloaterWindow : Window
             Show();
             Activate();
             Topmost = true;
+            SampleBrightness();   // 显形时补一次采样，避免桌面直显文字颜色滞后
         }
         else
         {
@@ -267,7 +359,8 @@ public partial class FloaterWindow : Window
             _trayBare.Checked = _ui.DisplayMode == FloaterDisplayMode.Bare;
     }
 
-    /// <summary>采样悬浮窗区域桌面亮度，驱动桌面直显下自动切换深/白文字。</summary>
+    /// <summary>采样悬浮窗四周桌面亮度，驱动桌面直显下自动切换深/白文字。</summary>
+    /// 改为"四周角采样"：避开悬浮窗自身像素，且只移/显变化时才被防抖调用，不再常驻轮询。
     private void SampleBrightness()
     {
         // 玻璃卡片有主题底色，不依赖背景；仅桌面直显时按背景明暗着色
@@ -275,32 +368,54 @@ public partial class FloaterWindow : Window
         try
         {
             var scale = VisualTreeHelper.GetDpi(this);
-            int x = Math.Max(0, (int)Math.Round((Left - SystemParameters.VirtualScreenLeft) * scale.DpiScaleX));
-            int y = Math.Max(0, (int)Math.Round((Top - SystemParameters.VirtualScreenTop) * scale.DpiScaleY));
-            int w = Math.Max(1, (int)Math.Round(ActualWidth * scale.DpiScaleX));
-            int h = Math.Max(1, (int)Math.Round(ActualHeight * scale.DpiScaleY));
+            var vsl = SystemParameters.VirtualScreenLeft;
+            var vst = SystemParameters.VirtualScreenTop;
+            var vsr = vsl + SystemParameters.VirtualScreenWidth;
+            var vsb = vst + SystemParameters.VirtualScreenHeight;
+            double dx = scale.DpiScaleX, dy = scale.DpiScaleY;
 
-            using var full = new System.Drawing.Bitmap(w, h);
-            using (var g = System.Drawing.Graphics.FromImage(full))
+            // 取悬浮窗四周(紧贴边缘外侧)的小面片，避开窗内文字/图标像素
+            int grabW = Math.Max(16, (int)Math.Round(24 * dx));
+            int grabH = Math.Max(12, (int)Math.Round(18 * dy));
+            var corners = new[]
             {
-                g.CopyFromScreen(x, y, 0, 0, new System.Drawing.Size(w, h),
-                    System.Drawing.CopyPixelOperation.SourceCopy);
-            }
-
-            using var thumb = new System.Drawing.Bitmap(6, 4);
-            using (var g2 = System.Drawing.Graphics.FromImage(thumb))
-                g2.DrawImage(full, 0, 0, 6, 4);
+                (x: Left + 6,               y: Top + 4),
+                (x: Left + Width - 8,       y: Top + 4),
+                (x: Left + 6,               y: Top + Height - 10),
+                (x: Left + Width - 8,       y: Top + Height - 10),
+            };
 
             double sum = 0;
             int n = 0;
-            for (int yy = 0; yy < thumb.Height; yy++)
-                for (int xx = 0; xx < thumb.Width; xx++)
+            foreach (var (x, y) in corners)
+            {
+                int sx = (int)Math.Round((x - vsl) * dx);
+                int sy = (int)Math.Round((y - vst) * dy);
+                int sxl = (int)Math.Round(vsl * dx);
+                int syl = (int)Math.Round(vst * dy);
+                int sxr = (int)Math.Round(vsr * dx);
+                int syb = (int)Math.Round(vsb * dy);
+                // 面片越出虚拟屏(贴边/贴角时可能没有足够桌面)则跳过
+                if (sx < sxl || sy < syl || sx + grabW > sxr || sy + grabH > syb) continue;
+
+                using var patch = new System.Drawing.Bitmap(grabW, grabH);
+                using (var g = System.Drawing.Graphics.FromImage(patch))
                 {
-                    var p = thumb.GetPixel(xx, yy);
-                    sum += 0.299 * p.R + 0.587 * p.G + 0.114 * p.B;
-                    n++;
+                    g.CopyFromScreen(sx, sy, 0, 0, new System.Drawing.Size(grabW, grabH),
+                        System.Drawing.CopyPixelOperation.SourceCopy);
                 }
-            double avg = n > 0 ? sum / n : 255;
+                // 隔点采样，进一步降低取色开销
+                for (int yy = 0; yy < grabH; yy += 2)
+                    for (int xx = 0; xx < grabW; xx += 2)
+                    {
+                        var p = patch.GetPixel(xx, yy);
+                        sum += 0.299 * p.R + 0.587 * p.G + 0.114 * p.B;
+                        n++;
+                    }
+            }
+            if (n == 0) return;   // 四周都采不到(极小屏/贴角)，保持上次状态
+
+            double avg = sum / n;
             // 迟滞判定：进入/退出暗背景用不同阈值，中间留保持带，避免背景亮度在临界点使文字深/白反复横跳
             bool dark = _vm.IsDarkBackground ? avg < 165 : avg < 135;
             if (dark != _vm.IsDarkBackground)

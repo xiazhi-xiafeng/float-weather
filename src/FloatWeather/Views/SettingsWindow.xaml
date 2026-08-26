@@ -188,6 +188,22 @@
                                     Margin="6,6,0,0" VerticalAlignment="Center"/>
                             <TextBlock Text="100% 为不透明；桌面直显建议配合鼠标穿透贴靠桌面" FontSize="10"
                                        Foreground="{StaticResource TextFaintBrush}" Margin="0,6,0,0"/>
+                            <Grid Margin="0,12,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="贴边吸附距离" FontSize="13" FontWeight="SemiBold"
+                                           Foreground="{StaticResource TextHighBrush}" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{Binding SnapThreshold, StringFormat={}{0}px}"
+                                           FontSize="12" Foreground="{StaticResource TextMidBrush}"
+                                           VerticalAlignment="Center" Margin="10,0,0,0"
+                                           MinWidth="40" TextAlignment="Right"/>
+                            </Grid>
+                            <Slider Minimum="0" Maximum="60" Value="{Binding SnapThreshold}"
+                                    Margin="6,6,0,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="拖到屏幕边缘多少距离内自动吸附对齐；0 为关闭" FontSize="10"
+                                       Foreground="{StaticResource TextFaintBrush}" Margin="0,6,0,0"/>
                         </StackPanel>
                     </Border>
 
