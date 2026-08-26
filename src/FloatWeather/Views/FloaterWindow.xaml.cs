@@ -561,8 +561,7 @@ public partial class FloaterWindow : Window
         _tray.Text = tooltip.Length > 63 ? tooltip[..62] + "…" : tooltip;
     }
 
-    /// <summary>采样悬浮窗四周桌面亮度，驱动桌面直显下自动切换深/白文字。</summary>
-    /// 改为"四周角采样"：避开悬浮窗自身像素，且只移/显变化时才被防抖调用，不再常驻轮询。
+    /// <summary>采样悬浮窗覆盖的桌面亮度，驱动桌面直显下自动切换深/白文字。</summary>
     private void SampleBrightness()
     {
         // 玻璃卡片有主题底色，不依赖背景；仅桌面直显时按背景明暗着色
@@ -576,50 +575,45 @@ public partial class FloaterWindow : Window
             var vsb = vst + SystemParameters.VirtualScreenHeight;
             double dx = scale.DpiScaleX, dy = scale.DpiScaleY;
 
-            // 取悬浮窗四个对角"外侧紧邻"的小面片：面片完全在窗口外，避免采到窗内半透明像素/文字图标。
-            // 之前用窗口内侧 (Left+6,Top+4)，24px 面片大部分落在窗体上，深背景下半透明玻璃把亮度推高，
-            // 导致"亮背景误判"而一直使用深色文字（深背景看不清）。改为窗外后即为该角落桌面真实亮度。
-            int grabW = Math.Max(16, (int)Math.Round(24 * dx));
-            int grabH = Math.Max(12, (int)Math.Round(18 * dy));
-            var corners = new[]
-            {
-                (x: Left - grabW,      y: Top - grabH),
-                (x: Left + Width,      y: Top - grabH),
-                (x: Left - grabW,      y: Top + Height),
-                (x: Left + Width,      y: Top + Height),
-            };
+            // Bare 窗口背景完全透明(Background=Transparent)，直接采样悬浮窗覆盖的"整块桌面"，
+            // 比采"四角外侧碎片"更能代表窗口主体所在区域的真实明暗(纯色背景即取到该纯色本身)。
+            int sw = Math.Max(8, (int)Math.Round(ActualWidth * dx));
+            int sh = Math.Max(6, (int)Math.Round(ActualHeight * dy));
+            int sx = (int)Math.Round(Left * dx) - (int)Math.Round(vsl * dx);
+            int sy = (int)Math.Round(Top * dy) - (int)Math.Round(vst * dy);
+            int sxl = (int)Math.Round(vsl * dx);
+            int syl = (int)Math.Round(vst * dy);
+            int sxr = (int)Math.Round(vsr * dx);
+            int syb = (int)Math.Round(vsb * dy);
+            // 越出虚拟屏(极小屏/贴角/被任务栏顶出)则保持上次状态，避免越界读取
+            if (sx < sxl || sy < syl || sx + sw > sxr || sy + sh > syb) return;
 
-            double sum = 0;
-            int n = 0;
-            foreach (var (x, y) in corners)
+            using var patch = new System.Drawing.Bitmap(sw, sh);
+            using (var g = System.Drawing.Graphics.FromImage(patch))
             {
-                int sx = (int)Math.Round((x - vsl) * dx);
-                int sy = (int)Math.Round((y - vst) * dy);
-                int sxl = (int)Math.Round(vsl * dx);
-                int syl = (int)Math.Round(vst * dy);
-                int sxr = (int)Math.Round(vsr * dx);
-                int syb = (int)Math.Round(vsb * dy);
-                // 面片越出虚拟屏(贴边/贴角时可能没有足够桌面)则跳过
-                if (sx < sxl || sy < syl || sx + grabW > sxr || sy + grabH > syb) continue;
-
-                using var patch = new System.Drawing.Bitmap(grabW, grabH);
-                using (var g = System.Drawing.Graphics.FromImage(patch))
-                {
-                    g.CopyFromScreen(sx, sy, 0, 0, new System.Drawing.Size(grabW, grabH),
-                        System.Drawing.CopyPixelOperation.SourceCopy);
-                }
-                // 隔点采样，进一步降低取色开销
-                for (int yy = 0; yy < grabH; yy += 2)
-                    for (int xx = 0; xx < grabW; xx += 2)
-                    {
-                        var p = patch.GetPixel(xx, yy);
-                        sum += 0.299 * p.R + 0.587 * p.G + 0.114 * p.B;
-                        n++;
-                    }
+                g.CopyFromScreen(sx, sy, 0, 0, new System.Drawing.Size(sw, sh),
+                    System.Drawing.CopyPixelOperation.SourceCopy);
             }
-            if (n == 0) return;   // 四周都采不到(极小屏/贴角)，保持上次状态
+            // 隔点采样整块背景亮度，记录每个值用于后面的截断抗噪
+            var lums = new System.Collections.Generic.List<int>(sw * sh / 4);
+            for (int yy = 0; yy < sh; yy += 2)
+                for (int xx = 0; xx < sw; xx += 2)
+                {
+                    var p = patch.GetPixel(xx, yy);
+                    lums.Add((int)(0.299 * p.R + 0.587 * p.G + 0.114 * p.B));
+                }
+            if (lums.Count == 0) return;
 
-            double avg = sum / n;
+            // 截断中段平均：体积小、抗字体/图标像素污染。剔除最亮5%(白字)与最暗5%(纯黑/图标)后取均值，
+            // 这样纯色背景的亮度判定基本只由背景本身决定。
+            lums.Sort();
+            int lo = lums.Count * 5 / 100;
+            int hi = lums.Count * 95 / 100;
+            if (hi <= lo) hi = lo + 1;
+            long sum = 0;
+            for (int i = lo; i < hi; i++) sum += lums[i];
+            double avg = (double)sum / (hi - lo);
+
             // 迟滞判定：进入/退出暗背景用不同阈值，中间留保持带，避免背景亮度在临界点使文字深/白反复横跳
             bool dark = _vm.IsDarkBackground ? avg < 165 : avg < 135;
             if (dark != _vm.IsDarkBackground)
