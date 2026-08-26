@@ -108,36 +108,54 @@ public partial class TemperatureChart : UserControl
 
         if (hasBand)
         {
-            // 高低温温差带
+            // 高低温坐标：低线至少位于高线下方 minGap 像素，温差过小时也保证不重叠、数字可读
+            int n = _points.Count;
+            var highPts = new Point[n];
+            var lowPts = new Point[n];
+            const double minGap = 4.0;
+            for (int i = 0; i < n; i++)
+            {
+                double hHigh = Y(_points[i].High);
+                double rawLow = Y(_points[i].Low ?? _points[i].High);
+                highPts[i] = new Point(X(i), hHigh);
+                lowPts[i] = new Point(X(i), Math.Max(rawLow, hHigh + minGap));
+            }
+
+            // 温差带：中性淡色半透明底衬，仅作"高低温区间"提示
             var band = new PathGeometry();
             var fig = new PathFigure { IsClosed = true, IsFilled = true };
-            for (int i = 0; i < _points.Count; i++)
-            {
-                var seg = new LineSegment(new Point(X(i), Y(_points[i].High)), i > 0);
-                if (i == 0) fig.StartPoint = seg.Point; else fig.Segments.Add(seg);
-            }
-            for (int i = _points.Count - 1; i >= 0; i--)
-            {
-                var seg = new LineSegment(new Point(X(i), Y(_points[i].Low!.Value)), true);
-                fig.Segments.Add(seg);
-            }
+            fig.StartPoint = highPts[0];
+            for (int i = 1; i < n; i++) fig.Segments.Add(new LineSegment(highPts[i], true));
+            for (int i = n - 1; i >= 0; i--) fig.Segments.Add(new LineSegment(lowPts[i], true));
             band.Figures.Add(fig);
-            var fill = new LinearGradientBrush();
-            fill.GradientStops.Add(new GradientStop(Color.FromArgb(0x40, 0x4D, 0x8D, 0xFF), 0));
-            fill.GradientStops.Add(new GradientStop(Color.FromArgb(0x40, 0xFF, 0xC9, 0x66), 1));
-            ChartCanvas.Children.Add(new Path { Data = band, Fill = fill });
+            ChartCanvas.Children.Add(new Path { Data = band, Fill = new SolidColorBrush(Color.FromArgb(0x22, 0xB8, 0xC6, 0xD6)) });
 
-            // 高温线
-            ChartCanvas.Children.Add(BuildPolyline(_points.Select(p => p.High), X, Y, HighColor, 2.2));
-            // 低温线
-            ChartCanvas.Children.Add(BuildPolyline(_points.Select(p => p.Low ?? p.High), X, Y, LowColor, 2.2));
+            ChartCanvas.Children.Add(BuildPolyline(highPts, HighColor, 2.6));
+            ChartCanvas.Children.Add(BuildPolyline(lowPts, LowColor, 2.4));
+            for (int i = 0; i < n; i++)
+            {
+                AddDot(highPts[i].X, highPts[i].Y, HighColor, 2.6);
+                AddDot(lowPts[i].X, lowPts[i].Y, LowColor, 2.4);
+                // 温度数字：高温标点上方、低温标点下方，配合最小间距互不遮挡
+                AddTempLabel(_points[i].High, highPts[i].X, highPts[i].Y, HighColor, below: false);
+                AddTempLabel(_points[i].Low ?? _points[i].High, lowPts[i].X, lowPts[i].Y, LowColor, below: true);
+            }
         }
         else
         {
-            // 单值线 + 线下渐变面积
+            // 单值线 + 线下渐变面积（过去24h观察序列）
             var area = BuildArea(_points.Select(p => p.High), X, Y, padT + ch);
             ChartCanvas.Children.Add(area);
             ChartCanvas.Children.Add(BuildPolyline(_points.Select(p => p.High), X, Y, HighColor, 2.4));
+
+            // 点少时逐点标数字便于查看；点多时逐点数字会挤在一起，改用整体最高/最低角标
+            bool showLabels = _points.Count <= 8;
+            for (int i = 0; i < _points.Count; i++)
+            {
+                double px = X(i), py = Y(_points[i].High);
+                AddDot(px, py, HighColor, 2.4);
+                if (showLabels) AddTempLabel(_points[i].High, px, py, HighColor, below: false);
+            }
         }
 
         // 4) 坐标轴标签：首、中、末三点的 X 标签
@@ -156,15 +174,18 @@ public partial class TemperatureChart : UserControl
             ChartCanvas.Children.Add(label);
         }
 
-        // 最高 / 最低温度标注
-        double overallMin = double.MaxValue, overallMax = double.MinValue;
-        foreach (var p in _points)
+        // 最高 / 最低温度标注（单值序列且点多无法逐点标注时，用整体角标；点位少时已逐点标数字，避免覆盖）
+        if (!hasBand && _points.Count > 8)
         {
-            overallMax = Math.Max(overallMax, p.High);
-            overallMin = Math.Min(overallMin, p.Low ?? p.High);
+            double overallMin = double.MaxValue, overallMax = double.MinValue;
+            foreach (var p in _points)
+            {
+                overallMax = Math.Max(overallMax, p.High);
+                overallMin = Math.Min(overallMin, p.Low ?? p.High);
+            }
+            AddCornerText($"{overallMax:0.#}°", HighColor, padL, -1);
+            AddCornerText($"{overallMin:0.#}°", HighColor, cw, 1);
         }
-        AddCornerText($"{overallMax:0.#}°", HighColor, padL, -1);
-        AddCornerText(hasBand ? $"{overallMin:0.#}°" : "", hasBand ? LowColor : HighColor, cw, 1);
     }
 
     private void AddCornerText(string text, Color color, double leftOffset, int align)
@@ -183,6 +204,22 @@ public partial class TemperatureChart : UserControl
         ChartCanvas.Children.Add(t);
     }
 
+    private void AddDot(double x, double y, Color color, double r)
+    {
+        var dot = new Ellipse
+        {
+            Width = r * 2.4,
+            Height = r * 2.4,
+            Fill = new SolidColorBrush(color),
+            Stroke = new SolidColorBrush(Color.FromArgb(0xD0, 0xFF, 0xFF, 0xFF)),
+            StrokeThickness = 1,
+            // 原色圆点、白色描边，与曲线同色即可在深浅背景上都清晰
+        };
+        Canvas.SetLeft(dot, x - dot.Width / 2);
+        Canvas.SetTop(dot, y - dot.Height / 2);
+        ChartCanvas.Children.Add(dot);
+    }
+
     private static Polyline BuildPolyline(IEnumerable<double> values, Func<int, double> X, Func<double, double> Y, Color color, double thickness)
     {
         var pl = new Polyline
@@ -196,6 +233,38 @@ public partial class TemperatureChart : UserControl
         foreach (var v in values)
             pl.Points.Add(new Point(X(i++), Y(v)));
         return pl;
+    }
+
+    private static Polyline BuildPolyline(IReadOnlyList<Point> points, Color color, double thickness)
+    {
+        var pl = new Polyline
+        {
+            Stroke = new SolidColorBrush(color),
+            StrokeThickness = thickness,
+            StrokeLineJoin = PenLineJoin.Round,
+            StrokeEndLineCap = PenLineCap.Round,
+        };
+        foreach (var p in points)
+            pl.Points.Add(p);
+        return pl;
+    }
+
+    /// <summary>在数据点附近标注温度数字：高温标上方、低温标下方，边缘自动收拢到画布内。</summary>
+    private void AddTempLabel(double temp, double x, double y, Color color, bool below)
+    {
+        var t = new TextBlock
+        {
+            Text = $"{temp:0.#}°",
+            FontSize = 9,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = new SolidColorBrush(color),
+        };
+        t.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        double px = Math.Clamp(x - t.DesiredSize.Width / 2, 0, Math.Max(0, ChartCanvas.ActualWidth - t.DesiredSize.Width));
+        double py = below ? y + 3 : y - t.DesiredSize.Height - 3;
+        Canvas.SetLeft(t, px);
+        Canvas.SetTop(t, py);
+        ChartCanvas.Children.Add(t);
     }
 
     private static Path BuildArea(IEnumerable<double> values, Func<int, double> X, Func<double, double> Y, double baselineY)
